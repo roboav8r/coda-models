@@ -1,13 +1,17 @@
-numpy
-torch>=1.1
-numba
-tensorboardX
-easydict
-pyyaml
-scikit-image
-tqdm
-wandb
+scikit-image==0.17.1
+numba==0.53
+
+# numpy==1.21.1
+# packaging
+# numba
+# tensorboardX
+# easydict
+# pyyaml
+# tqdm
+# wandb
 # pytorch-scatter
-open3d
-roslibpy
-rospkg
+# open3d
+# roslibpy
+# rospkg
+# nuscenes-devkit==1.0.5
+# waymo-open-dataset-tf-2-5-0
