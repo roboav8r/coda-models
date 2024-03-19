@@ -58,6 +58,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install coda-models
 COPY . /coda-models
 WORKDIR /coda-models
+# RUN python3 setup.py develop
 
 RUN mkdir ckpts
 WORKDIR /coda-models/ckpts

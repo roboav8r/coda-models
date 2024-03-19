@@ -24,10 +24,10 @@ from pcdet.config import cfg, cfg_from_yaml_file
 from pcdet.datasets import DatasetTemplate
 from pcdet.models import build_network, load_data_to_gpu
 from pcdet.utils import common_utils
-from pcdet.datasets import CODataset
-from pcdet.datasets import JRDBDataset
+from datasets.coda import CODataset
+from datasets.jrdb import JRDBDataset
 
-from pcdet.datasets.coda import coda_utils
+from datasets.coda import coda_utils
 
 class DemoDataset(DatasetTemplate):
     def __init__(self, dataset_cfg, class_names, training=True, root_path=None, logger=None, ext='.bin'):

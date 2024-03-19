@@ -169,13 +169,11 @@ def visualize_3d(model, dataloader, pc_msg, bbox_3d_pub, color_map, logger=None)
 def publish_3d_dets(model, dataloader, pc_msg, det_3d_pub, logger=None):
 
     #1 Prepare pc for model (Optional coordinate conversion if necessary)
-    # lidar_frame = pc_msg.header.frame_id
-    # lidar_ts    = pc_msg.header.stamp # ROS timestamp
-
     pc_data = pc2.read_points(pc_msg, field_names=("x", "y", "z"), skip_nans=True)
     pc_list = list(pc_data)
     pc_np = np.array(pc_list, dtype=np.float32)
-    data_dict = pcnp_to_datadict(pc_np, dataloader, frame_id=0) #TODO - check this
+
+    data_dict = pcnp_to_datadict(pc_np, dataloader, frame_id=0)
     
     #2 Perform model inference
     pred_dicts, _ = model.forward(data_dict)
@@ -191,13 +189,7 @@ def publish_3d_dets(model, dataloader, pc_msg, det_3d_pub, logger=None):
 
     for bbox_idx, bbox_3d in enumerate(pred_boxes):
 
-        # pred_label  = pred_labels[bbox_idx]
-        # pred_score  = pred_cls_scores[bbox_idx]
-
-        # bbox3d_xyz      = bbox_3d[0:3]
-        # bbox3d_lwh      = bbox_3d[3:6]
         bbox3d_quat     = R.from_rotvec(np.array([0, 0, bbox_3d[6] + 1e-10]), degrees=False).as_quat()
-        # instance_id     = bbox_idx # Not enabled across frames for obj det task
       
         # Populate detection message
         det_msg = Detection3D()

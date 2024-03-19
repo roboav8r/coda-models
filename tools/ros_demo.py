@@ -17,10 +17,11 @@ from pcdet.config import cfg, cfg_from_yaml_file
 from pcdet.datasets import DatasetTemplate
 from pcdet.models import build_network, load_data_to_gpu
 from pcdet.utils import common_utils
-from pcdet.datasets.coda import coda_utils
+from datasets.coda import coda_utils
 
 # ROS IMPORTS
 import rclpy
+
 from rclpy.node import Node
 from sensor_msgs.msg import PointCloud2
 from sensor_msgs_py import point_cloud2
@@ -37,6 +38,7 @@ def normalize_color(color):
 def parse_config():
     parser = argparse.ArgumentParser(description='arg parser')
     parser.add_argument('--cfg_file', type=str, default='cfgs/da-coda-coda_models/waymocenterhead/pvrcnn_allclass128full_finetune_headfull.yaml',
+
                         help='specify the config for demo')
     parser.add_argument('--pc', '--point_cloud_topic', type=str, default='/coda/ouster/points',
                         help='specify the point cloud ros topic name')
@@ -107,6 +109,7 @@ class CodaDetector(Node):
                 self.pc_msg_queue.queue.clear()
             self.pc_msg_queue.put(msg)
             self.pc_count = 0
+
     
         if not self.pc_msg_queue.empty():
             self.pc_msg = self.pc_msg_queue.get()

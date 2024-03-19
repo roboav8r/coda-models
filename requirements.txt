@@ -2,20 +2,6 @@ scikit-image==0.18.0
 numba==0.49.0
 matplotlib==3.5.0
 scipy==1.8.0
-
 cumm-cu113 
 spconv-cu113 
 wandb
-
-
-# numpy
-# torch==1.10.0
-# tensorboardX
-# easydict
-# pyyaml
-# tqdm
-# wandb
-# # pytorch-scatter
-# open3d
-# roslibpy
-# rospkg
