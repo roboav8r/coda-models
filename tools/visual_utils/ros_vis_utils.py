@@ -5,12 +5,10 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 
 #ROS IMPORTS
-import rclpy
-import std_msgs.msg
-from sensor_msgs.msg import PointCloud2
+from builtin_interfaces.msg import Duration
 import sensor_msgs_py.point_cloud2 as pc2
 from visualization_msgs.msg import Marker, MarkerArray
-from vision_msgs.msg import Detection3D, Detection3DArray
+from vision_msgs.msg import Detection3D, Detection3DArray, ObjectHypothesisWithPose
 from geometry_msgs.msg import Point
 
 # CUSTOM IMPORTS
@@ -90,7 +88,7 @@ def create_3d_bbox_marker(cx, cy, cz, l, w, h, roll, pitch, yaw,
     marker.pose.orientation.x = 0.0
     marker.pose.orientation.y = 0.0
     marker.pose.orientation.z = 0.0
-    marker.lifetime = rospy.Duration(0)
+    marker.lifetime = Duration(0)
 
     for start, end in lines:
         start_pt = Point(*frame_corners[:, start])
@@ -115,13 +113,13 @@ def pcnp_to_datadict(pc_np, dataloader, frame_id=0):
 def visualize_3d(model, dataloader, pc_msg, bbox_3d_pub, color_map, logger=None):
 
     #1 Prepare pc for model (Optional coordinate conversion if necessary)
-    lidar_frame = pc_msg.header.frame_id
-    lidar_ts    = pc_msg.header.stamp # ROS timestamp
+    # lidar_frame = pc_msg.header.frame_id
+    # lidar_ts    = pc_msg.header.stamp # ROS timestamp
 
     pc_data = pc2.read_points(pc_msg, field_names=("x", "y", "z"), skip_nans=True)
     pc_list = list(pc_data)
     pc_np = np.array(pc_list, dtype=np.float32)
-    data_dict = pcnp_to_datadict(pc_np, dataloader, frame_id=pc_msg.header.seq)
+    data_dict = pcnp_to_datadict(pc_np, dataloader, frame_id=0) # TODO check frame_id
     
     #2 Perform model inference
     inference_start_time = time.time()
@@ -171,13 +169,11 @@ def visualize_3d(model, dataloader, pc_msg, bbox_3d_pub, color_map, logger=None)
 def publish_3d_dets(model, dataloader, pc_msg, det_3d_pub, logger=None):
 
     #1 Prepare pc for model (Optional coordinate conversion if necessary)
-    lidar_frame = pc_msg.header.frame_id
-    lidar_ts    = pc_msg.header.stamp # ROS timestamp
-
     pc_data = pc2.read_points(pc_msg, field_names=("x", "y", "z"), skip_nans=True)
     pc_list = list(pc_data)
     pc_np = np.array(pc_list, dtype=np.float32)
-    data_dict = pcnp_to_datadict(pc_np, dataloader, frame_id=pc_msg.header.seq)
+
+    data_dict = pcnp_to_datadict(pc_np, dataloader, frame_id=0)
     
     #2 Perform model inference
     pred_dicts, _ = model.forward(data_dict)
@@ -192,21 +188,30 @@ def publish_3d_dets(model, dataloader, pc_msg, det_3d_pub, logger=None):
     pred_cls_scores = pred_dicts[0]['pred_cls_scores'].detach().cpu().numpy()
 
     for bbox_idx, bbox_3d in enumerate(pred_boxes):
-        pred_label  = pred_labels[bbox_idx]
-        pred_score  = pred_cls_scores[bbox_idx]
 
-        bbox3d_xyz      = bbox_3d[0:3]
-        bbox3d_lwh      = bbox_3d[3:6]
-        axis_angles     = np.array([0, 0, bbox_3d[6] + 1e-10])
-        bbox3d_angle    = R.from_rotvec(axis_angles, degrees=False).as_euler('xyz', degrees=False)
-        instance_id     = bbox_idx # Not enabled across frames for obj det task
+        bbox3d_quat     = R.from_rotvec(np.array([0, 0, bbox_3d[6] + 1e-10]), degrees=False).as_quat()
       
-        # TODO - populate detection message
+        # Populate detection message
         det_msg = Detection3D()
-        # print("Pos: %f, %f %f" % (bbox3d_xyz[0], bbox3d_xyz[1], bbox3d_xyz[2]))
-        # print("Length / Width / Height: %f, %f %f" % (bbox3d_lwh[0], bbox3d_lwh[1], bbox3d_lwh[2]))
-        # print("Orientation: " % (axis_angles[2]))
-        # print("Label: %s, %s\n" % (pred_label, str(pred_score)))
+        det_msg.header = pc_msg.header
+
+        det_msg.bbox.center.position.x = float(bbox_3d[0])
+        det_msg.bbox.center.position.y = float(bbox_3d[1])
+        det_msg.bbox.center.position.z = float(bbox_3d[2])
+        det_msg.bbox.center.orientation.x = float(bbox3d_quat[0])
+        det_msg.bbox.center.orientation.y = float(bbox3d_quat[1])
+        det_msg.bbox.center.orientation.z = float(bbox3d_quat[2])
+        det_msg.bbox.center.orientation.w = float(bbox3d_quat[3])
+        det_msg.bbox.size.x = float(bbox_3d[3])
+        det_msg.bbox.size.y = float(bbox_3d[4])
+        det_msg.bbox.size.z = float(bbox_3d[5])
+        
+        hyp_pose_msg = ObjectHypothesisWithPose()
+        hyp_pose_msg.hypothesis.class_id = str(pred_labels[bbox_idx])
+        hyp_pose_msg.hypothesis.score = float(pred_cls_scores[bbox_idx])
+        hyp_pose_msg.pose.pose = det_msg.bbox.center
+
+        det_msg.results.append(hyp_pose_msg)
         
         dets_3d_msg.detections.append(det_msg)
     
